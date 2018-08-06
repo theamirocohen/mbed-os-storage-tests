@@ -318,12 +318,11 @@ static void FS_fopen_read_update_create()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "r+")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "r")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int read_sz = fread(read_buf, sizeof(char), small_buf_size, fd[0]);
     TEST_ASSERT_EQUAL(small_buf_size, read_sz);
-
     TEST_ASSERT_EQUAL_STRING_LEN(write_buf, read_buf, small_buf_size);
 
     res = fclose(fd[0]);
@@ -395,35 +394,6 @@ static void FS_fclose_valid_flow()
 
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
-
-//fclose an already closed file
-static void FS_fclose_closed_file()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(EOF, res);
 
     res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
@@ -540,88 +510,6 @@ static void FS_fwrite_with_fopen_r_mode()
     deinit();
 }
 
-//fwrite with stream is null
-static void FS_fwrite_stream_null()
-{
-    char buffer[small_buf_size] = "good_day";
-
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    int write_sz = fwrite(buffer, sizeof(char), small_buf_size, NULL);
-    TEST_ASSERT_EQUAL(0, write_sz);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
-
-//fwrite with buffer is null
-static void FS_fwrite_buff_null()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    int write_sz = fwrite(NULL, sizeof(char), small_buf_size, fd[0]);
-    TEST_ASSERT_EQUAL(0, write_sz);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
-
-//fwrite with size is zero
-static void FS_fwrite_size_zero()
-{
-    char buffer[small_buf_size] = "good_day";
-
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    int write_sz = fwrite(buffer, 0, small_buf_size, fd[0]);
-    TEST_ASSERT_EQUAL(0, write_sz);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
-
 /*----------------fread()------------------*/
 
 //fread with size zero
@@ -725,44 +613,6 @@ static void FS_fread_with_fopen_w_mode()
     TEST_ASSERT_EQUAL(0, res);
 
     int read_sz = fread(buffer, sizeof(char), small_buf_size, fd[0]);
-    TEST_ASSERT_EQUAL(0, read_sz);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
-
-//fread to fopen with buffer as null
-static void FS_fread_with_ptr_null()
-{
-    char write_buf[small_buf_size] = "123456789";
-
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    int write_sz = fwrite(write_buf, sizeof(char), small_buf_size, fd[0]);
-    TEST_ASSERT_EQUAL(small_buf_size, write_sz);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    int read_sz = fread(NULL, sizeof(char), small_buf_size, fd[0]);
     TEST_ASSERT_EQUAL(0, read_sz);
 
     res = fclose(fd[0]);
@@ -1007,28 +857,6 @@ static void FS_fread_valid_flow_small_file_read_more_than_write()
 
 /*----------------fgetc()------------------*/
 
-//fgetc to null ptr
-static void FS_fgetc_null()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fgetc(NULL);
-    TEST_ASSERT_EQUAL(1, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
-
 //fgetc to an empty file
 static void FS_fgetc_empty_file()
 {
@@ -1064,11 +892,12 @@ static void FS_fgetc_empty_file()
 }
 
 //fgetc valid flow
-static void fgetc_valid_flow()
+static void FS_fgetc_valid_flow()
 {
     char write_buf[small_buf_size] = "good_day";
     char read_buf[small_buf_size] = {};
-    int ch = 0, i = 0;
+    int ch = 0;
+    unsigned int i = 0;
 
     init();
 
@@ -1112,8 +941,6 @@ static void fgetc_valid_flow()
 //fgetc to fopen mode w
 static void FS_fgetc_with_fopen_w_mode()
 {
-    char buffer[small_buf_size] = {};
-
     init();
 
     LittleFileSystem fs("lfs");
@@ -1143,29 +970,6 @@ static void FS_fgetc_with_fopen_w_mode()
 }
 
 /*----------------fgets()------------------*/
-
-//fgets to null ptr
-static void FS_fgets_null()
-{
-    char buffer[small_buf_size] = {};
-
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    TEST_ASSERT_NULL(fgets(buffer, sizeof(buffer), NULL));
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
 
 //fgets to an empty file
 static void FS_fgets_empty_file()
@@ -1350,48 +1154,6 @@ static void FS_fgets_new_line()
     deinit();
 }
 
-//fgets with one character to read
-static void FS_fgets_len_is_one()
-{
-    char write_buf[small_buf_size] = "good_day";
-    char read_buf[small_buf_size] = {};
-
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
-    TEST_ASSERT_EQUAL(sizeof(write_buf), write_sz);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !(fgets(read_buf, small_buf_size, fd[0]) != NULL);
-
-    TEST_ASSERT_EQUAL(0, res);
-    TEST_ASSERT_EQUAL_STRING("", read_buf);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
-
 //fgets to fopen mode w
 static void FS_fgets_with_fopen_w_mode()
 {
@@ -1429,8 +1191,6 @@ static void FS_fgets_with_fopen_w_mode()
 //fflush with null
 static void FS_fflush_null_stream()
 {
-    char buffer[small_buf_size] = {};
-
     init();
 
     LittleFileSystem fs("lfs");
@@ -1520,32 +1280,9 @@ static void FS_fflush_twice()
 
 /*----------------fputc()------------------*/
 
-//fputc with null
-static void FS_fputc_null_stream()
-{
-    char buffer[small_buf_size] = {};
-    int ch = 0;
-
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fputc(ch, NULL);
-    TEST_ASSERT_EQUAL(1, res);
-
-    deinit();
-}
-
 //fputc valid flow
 static void FS_fputc_valid_flow()
 {
-    char buffer[small_buf_size] = "good_day";
     int write_ch = 10, read_ch = 0;
 
     init();
@@ -1585,7 +1322,6 @@ static void FS_fputc_valid_flow()
 //fputc with file open for read mode
 static void FS_fputc_in_read_mode()
 {
-    char buffer[small_buf_size] = "good_day";
     int write_ch = 10;
 
     init();
@@ -1620,27 +1356,6 @@ static void FS_fputc_in_read_mode()
 }
 
 /*----------------fputs()------------------*/
-
-//fputs with null
-static void FS_fputs_null_stream()
-{
-    char write_buf[small_buf_size] = "123456789";
-
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fputs(write_buf, NULL);
-    TEST_ASSERT_EQUAL(1, res);
-
-    deinit();
-}
 
 //fputs valid flow
 static void FS_fputs_valid_flow()
@@ -1720,25 +1435,6 @@ static void FS_fputs_in_read_mode()
 }
 
 /*----------------fseek()------------------*/
-
-//fseek with null
-static void FS_fseek_null_stream()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fseek(NULL, 0, SEEK_SET);
-    TEST_ASSERT_NOT_EQUAL(0, res);
-
-    deinit();
-}
 
 //fseek empty file, SEEK_SET, offset 0
 static void FS_fseek_empty_file_seek_set()
@@ -1822,6 +1518,8 @@ static void FS_fseek_non_empty_file_seek_set()
 //fseek empty file, SEEK_SET, offset 1 - beyond end of file
 static void FS_fseek_beyond_empty_file_seek_set()
 {
+    char read_buf[small_buf_size] = "";
+
     init();
 
     LittleFileSystem fs("lfs");
@@ -1838,10 +1536,16 @@ static void FS_fseek_beyond_empty_file_seek_set()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], 10, SEEK_SET);
+    TEST_ASSERT_EQUAL(0, res);
+
+    int read_sz = fread(read_buf, sizeof(char), sizeof(read_buf), fd[0]);
+    TEST_ASSERT_EQUAL(0, read_sz);
+
+    res = feof(fd[0]);
     TEST_ASSERT_NOT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1857,6 +1561,7 @@ static void FS_fseek_beyond_empty_file_seek_set()
 static void FS_fseek_beyond_non_empty_file_seek_set()
 {
     char write_buf[small_buf_size] = "123456789";
+    char read_buf[small_buf_size] = "";
 
     init();
 
@@ -1877,10 +1582,16 @@ static void FS_fseek_beyond_non_empty_file_seek_set()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], sizeof(write_buf) + 1, SEEK_SET);
+    TEST_ASSERT_EQUAL(0, res);
+
+    int read_sz = fread(read_buf, sizeof(char), sizeof(read_buf), fd[0]);
+    TEST_ASSERT_EQUAL(0, read_sz);
+
+    res = feof(fd[0]);
     TEST_ASSERT_NOT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1911,7 +1622,7 @@ static void FS_fseek_before_empty_file_seek_set()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], -1, SEEK_SET);
@@ -1945,7 +1656,7 @@ static void FS_fseek_empty_file_seek_cur()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], 0, SEEK_CUR);
@@ -1987,7 +1698,7 @@ static void FS_fseek_non_empty_file_seek_cur()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], 0, SEEK_CUR);
@@ -2008,6 +1719,7 @@ static void FS_fseek_non_empty_file_seek_cur()
 //fseek empty file, SEEK_CUR, offset 1 - beyond end of file
 static void FS_fseek_beyond_empty_file_seek_cur()
 {
+    char read_buf[small_buf_size] = {};
     init();
 
     LittleFileSystem fs("lfs");
@@ -2024,10 +1736,16 @@ static void FS_fseek_beyond_empty_file_seek_cur()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], 1, SEEK_CUR);
+    TEST_ASSERT_EQUAL(0, res);
+
+    int read_sz = fread(read_buf, sizeof(char), sizeof(read_buf), fd[0]);
+    TEST_ASSERT_EQUAL(0, read_sz);
+
+    res = feof(fd[0]);
     TEST_ASSERT_NOT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -2042,6 +1760,7 @@ static void FS_fseek_beyond_empty_file_seek_cur()
 //fseek non empty file, SEEK_CUR, offset data_size + 1 - beyond end of file
 static void FS_fseek_beyond_non_empty_file_seek_cur()
 {
+    char read_buf[small_buf_size] = {};
     char write_buf[small_buf_size] = "123456789";
 
     init();
@@ -2063,10 +1782,16 @@ static void FS_fseek_beyond_non_empty_file_seek_cur()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], sizeof(write_buf) + 1, SEEK_CUR);
+    TEST_ASSERT_EQUAL(0, res);
+
+    int read_sz = fread(read_buf, sizeof(char), sizeof(read_buf), fd[0]);
+    TEST_ASSERT_EQUAL(0, read_sz);
+
+    res = feof(fd[0]);
     TEST_ASSERT_NOT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -2097,7 +1822,7 @@ static void FS_fseek_before_empty_file_seek_cur()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], -1, SEEK_CUR);
@@ -2131,7 +1856,7 @@ static void FS_fseek_empty_file_seek_end()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], 0, SEEK_END);
@@ -2173,7 +1898,7 @@ static void FS_fseek_non_empty_file_seek_end()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], 0, SEEK_END);
@@ -2194,6 +1919,8 @@ static void FS_fseek_non_empty_file_seek_end()
 //fseek empty file, SEEK_END, offset 1 - beyond end of file
 static void FS_fseek_beyond_empty_file_seek_end()
 {
+    char read_buf[small_buf_size] = {};
+
     init();
 
     LittleFileSystem fs("lfs");
@@ -2210,10 +1937,16 @@ static void FS_fseek_beyond_empty_file_seek_end()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], 1, SEEK_END);
+    TEST_ASSERT_EQUAL(0, res);
+
+    int read_sz = fread(read_buf, sizeof(char), sizeof(read_buf), fd[0]);
+    TEST_ASSERT_EQUAL(0, read_sz);
+
+    res = feof(fd[0]);
     TEST_ASSERT_NOT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -2228,6 +1961,7 @@ static void FS_fseek_beyond_empty_file_seek_end()
 //fseek non empty file, SEEK_END, offset data_size + 1 - beyond end of file
 static void FS_fseek_beyond_non_empty_file_seek_end()
 {
+    char read_buf[small_buf_size] = {};
     char write_buf[small_buf_size] = "123456789";
 
     init();
@@ -2249,10 +1983,16 @@ static void FS_fseek_beyond_non_empty_file_seek_end()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], sizeof(write_buf) + 1, SEEK_END);
+    TEST_ASSERT_EQUAL(0, res);
+
+    int read_sz = fread(read_buf, sizeof(char), sizeof(read_buf), fd[0]);
+    TEST_ASSERT_EQUAL(0, read_sz);
+
+    res = feof(fd[0]);
     TEST_ASSERT_NOT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -2283,7 +2023,7 @@ static void FS_fseek_before_empty_file_seek_end()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], -1, SEEK_END);
@@ -2322,7 +2062,7 @@ static void FS_fseek_negative_non_empty_file_seek_end()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fseek(fd[0], -(sizeof(write_buf)), SEEK_END);
@@ -2340,93 +2080,7 @@ static void FS_fseek_negative_non_empty_file_seek_end()
     deinit();
 }
 
-/*----------------ftell()------------------*/
-
-//ftell with null
-static void FS_ftell_null_stream()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = ftell(NULL);
-    TEST_ASSERT_EQUAL(-1, res);
-
-    deinit();
-}
-
-/*----------------feof()------------------*/
-
-//feof with null
-static void FS_feof_null_stream()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = ftell(NULL);
-    TEST_ASSERT_EQUAL(-1, res);
-
-    deinit();
-}
-
-/*----------------fsetpos()------------------*/
-
-//fsetpos with null
-static void FS_fsetpos_null_stream()
-{
-    fpos_t pos;
-
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fsetpos (NULL, &pos);
-    TEST_ASSERT_NOT_EQUAL(0, res);
-
-    deinit();
-}
-
 /*----------------fgetpos()------------------*/
-
-//fgetpos with null
-static void FS_fgetpos_null_stream()
-{
-    fpos_t pos;
-
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fgetpos (NULL, &pos);
-    TEST_ASSERT_NOT_EQUAL(0, res);
-
-    deinit();
-}
 
 //fgetpos rewrite file and check data
 static void FS_fgetpos_rewrite_check_data()
@@ -2481,27 +2135,6 @@ static void FS_fgetpos_rewrite_check_data()
 }
 
 /*----------------fscanf()------------------*/
-
-//fscanf with null
-static void FS_fscanf_null_stream()
-{
-    char read_buf[small_buf_size] = {};
-
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fscanf(NULL, "%s", read_buf);
-    TEST_ASSERT_NOT_EQUAL(EOF, res);
-
-    deinit();
-}
 
 //fscanf valid flow
 static void FS_fscanf_valid_flow()
@@ -2630,25 +2263,6 @@ static void FS_fscanf_more_fields_than_exist()
 
 /*----------------fprintf()------------------*/
 
-//fprintf with null
-static void FS_fprintf_null_stream()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fprintf(NULL, "%d %s", 123, "PI");
-    TEST_ASSERT_EQUAL(EOF, res);
-
-    deinit();
-}
-
 //fprintf in mode r
 static void FS_fprintf_read_mode()
 {
@@ -2685,25 +2299,6 @@ static void FS_fprintf_read_mode()
 
 /*----------------freopen()------------------*/
 
-//freopen with null
-static void FS_freopen_null_stream()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = freopen(NULL, "wb", NULL)) != NULL);
-    TEST_ASSERT_EQUAL(EOF, res);
-
-    deinit();
-}
-
 //freopen point to the same file with two file handler
 static void FS_freopen_point_to_same_file()
 {
@@ -2725,62 +2320,6 @@ static void FS_freopen_point_to_same_file()
     
     TEST_ASSERT_EQUAL(fd[0], fd[1]);
     
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
-
-//freopen change open file mode
-static void FS_freopen_change_file_mode()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[1] = freopen("", "rb", fd[0])) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
-
-//freopen invalid mode
-static void FS_freopen_invalid_mode()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[1] = freopen("", "", fd[0])) != NULL);
-    TEST_ASSERT_EQUAL(1, res);
-
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
@@ -2812,7 +2351,7 @@ static void FS_freopen_valid_flow()
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
     TEST_ASSERT_EQUAL(sizeof(write_buf), write_sz);
 
-    res = !((fd[1] = freopen("", "rb", fd[0])) != NULL);
+    res = !((fd[1] = freopen("/lfs/" "hello", "rb", fd[0])) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int read_sz = fread(read_buf, sizeof(char), sizeof(read_buf), fd[0]);
@@ -2849,7 +2388,7 @@ static void FS_fopen_write_one_byte_file()
     res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
-    int write_sz = fwrite((char *)write_buf, sizeof(char), sizeof(write_buf), fd[0]);
+    int write_sz = fwrite(&write_buf, sizeof(char), 1, fd[0]);
     TEST_ASSERT_EQUAL(sizeof(write_buf), write_sz);
 
     res = fclose(fd[0]);
@@ -2860,7 +2399,7 @@ static void FS_fopen_write_one_byte_file()
 
     int read_sz = fread(read_buf, sizeof(char), sizeof(read_buf), fd[0]);
     TEST_ASSERT_EQUAL(sizeof(write_buf), read_sz);
-    TEST_ASSERT_EQUAL_STRING(write_buf, read_buf);
+    TEST_ASSERT_EQUAL(write_buf, read_buf[0]);
 
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
@@ -2994,10 +2533,11 @@ static void FS_fopen_write_fifteen_byte_file()
     deinit();
 }
 
-//create a 5 Kbytes file
+//create a 5000 bytes file
 static void FS_fopen_write_five_Kbyte_file()
 {
-    char * write_buf = (char *)malloc(5000);
+    int buf_sz = 5000;
+    char *write_buf = (char *)malloc(buf_sz);
     char read_buf[10] = {};
     char check_buf[10] = "123456789";
 
@@ -3015,18 +2555,16 @@ static void FS_fopen_write_five_Kbyte_file()
     TEST_ASSERT_EQUAL(0, res);
 
     memcpy(write_buf, check_buf, sizeof(check_buf) - 1);
-    printf("sizeof(writebuf) = %d, writebuf = %s\n", sizeof(write_buf), write_buf);
-    int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
-    TEST_ASSERT_EQUAL(sizeof(write_buf), write_sz);
+    int write_sz = fwrite(write_buf, sizeof(char), buf_sz, fd[0]);
+    TEST_ASSERT_EQUAL(buf_sz, write_sz);
 
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb")) != NULL);
+    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int read_sz = fread(read_buf, sizeof(char), sizeof(read_buf) - 1, fd[0]);
-    printf("readsz = %d, readbuf = %s\n", read_sz, read_buf);
     TEST_ASSERT_EQUAL(sizeof(check_buf) - 1, read_sz);
     TEST_ASSERT_EQUAL_STRING(check_buf, read_buf);
 
@@ -3327,19 +2865,14 @@ Case cases[] = {
     Case("FS_fopen_write_update_create", FS_fopen_write_update_create),
 
     Case("FS_fclose_valid_flow", FS_fclose_valid_flow),
-    Case("FS_fclose_null", FS_fclose_closed_file),
 
     Case("FS_fwrite_nmemb_zero", FS_fwrite_nmemb_zero),
     Case("FS_fwrite_valid_flow", FS_fwrite_valid_flow),
     Case("FS_fwrite_with_fopen_r_mode", FS_fwrite_with_fopen_r_mode),
-    //Case("FS_fwrite_stream_null", FS_fwrite_stream_null),   //ARM & GCC_ARM:mbed Hardfault
-    //Case("FS_fwrite_buff_null", FS_fwrite_buff_null),     //ARM & GCC_ARM:FAIL: Expected 0 Was 10
-    //Case("FS_fwrite_size_zero", FS_fwrite_size_zero), //GCC_ARM:FAIL: Expected 0 Was 10
 
     Case("FS_fread_size_zero", FS_fread_size_zero),
     Case("FS_fread_nmemb_zero", FS_fread_nmemb_zero),
     Case("FS_fread_with_fopen_w_mode", FS_fread_with_fopen_w_mode),
-    //Case("FS_fread_with_ptr_null", FS_fread_with_ptr_null), //ARM & GCC_ARM:mbed Hardfault
     Case("FS_fread_to_fwrite_file", FS_fread_to_fwrite_file),
     Case("FS_fread_empty_file", FS_fread_empty_file),
     Case("FS_fread_valid_flow_small_file", FS_fread_valid_flow_small_file),
@@ -3347,9 +2880,8 @@ Case cases[] = {
     Case("FS_fread_valid_flow_large_file", FS_fread_valid_flow_large_file),
     Case("FS_fread_valid_flow_small_file_read_more_than_write", FS_fread_valid_flow_small_file_read_more_than_write),
 
-    //Case("FS_fgetc_null", FS_fgetc_null),  //GCC_ARM:mbed Hardfault
     Case("FS_fgetc_empty_file", FS_fgetc_empty_file),
-    Case("fgetc_valid_flow", fgetc_valid_flow),
+    Case("FS_fgetc_valid_flow", FS_fgetc_valid_flow),
     Case("FS_fgetc_with_fopen_w_mode", FS_fgetc_with_fopen_w_mode),
 
     Case("FS_fgets_empty_file", FS_fgets_empty_file),
@@ -3357,67 +2889,51 @@ Case cases[] = {
     Case("FS_fgets_null_buffer", FS_fgets_null_buffer),
     Case("FS_fgets_valid_flow", FS_fgets_valid_flow),
     Case("FS_fgets_new_line", FS_fgets_new_line),
-    //Case("FS_fgets_len_is_one", FS_fgets_len_is_one), //GCC_ARM:FAIL: Expected '' Was 'good_day'
     Case("FS_fgets_with_fopen_w_mode", FS_fgets_with_fopen_w_mode),
 
     Case("FS_fflush_null_stream", FS_fflush_null_stream),
     Case("FS_fflush_valid_flow", FS_fflush_valid_flow),
     Case("FS_fflush_twice", FS_fflush_twice),
 
-    //Case("FS_fputc_null_stream", FS_fputc_null_stream), //ARM & GCC_ARM:mbed Hardfault
     Case("FS_fputc_valid_flow", FS_fputc_valid_flow),
     Case("FS_fputc_in_read_mode", FS_fputc_in_read_mode),
 
-    //Case("FS_fputs_null_stream", FS_fputs_null_stream),  //ARM & GCC_ARM:mbed Hardfault
     Case("FS_fputs_valid_flow", FS_fputs_valid_flow),
     Case("FS_fputs_in_read_mode", FS_fputs_in_read_mode),
 
-    //Case("FS_fseek_null_stream", FS_fseek_null_stream),//ARM :mbed Hardfault
     Case("FS_fseek_empty_file_seek_set", FS_fseek_empty_file_seek_set),
     Case("FS_fseek_non_empty_file_seek_set", FS_fseek_non_empty_file_seek_set),
-    //Case("FS_fseek_empty_file_seek_set", FS_fseek_beyond_empty_file_seek_set), //GCC_ARM:fseek doesnt fail: Expected Not-Equal
-    //Case("FS_fseek_beyond_non_empty_file_seek_set", FS_fseek_beyond_non_empty_file_seek_set), //GCC_ARM:fseek doesnt fail: Expected Not-Equal
+    Case("FS_fseek_empty_file_seek_set", FS_fseek_beyond_empty_file_seek_set),
+    Case("FS_fseek_beyond_non_empty_file_seek_set", FS_fseek_beyond_non_empty_file_seek_set),
     Case("FS_fseek_before_empty_file_seek_set", FS_fseek_before_empty_file_seek_set),
     Case("FS_fseek_empty_file_seek_cur", FS_fseek_empty_file_seek_cur),
     Case("FS_fseek_non_empty_file_seek_cur", FS_fseek_non_empty_file_seek_cur),
-    //Case("FS_fseek_empty_file_seek_cur", FS_fseek_beyond_empty_file_seek_cur),//GCC_ARM:fseek doesnt fail: Expected Not-Equal
-    //Case("FS_fseek_beyond_non_empty_file_seek_cur", FS_fseek_beyond_non_empty_file_seek_cur),//GCC_ARM:fseek doesnt fail: Expected Not-Equal
+    Case("FS_fseek_empty_file_seek_cur", FS_fseek_beyond_empty_file_seek_cur),
+    Case("FS_fseek_beyond_non_empty_file_seek_cur", FS_fseek_beyond_non_empty_file_seek_cur),
     Case("FS_fseek_before_empty_file_seek_cur", FS_fseek_before_empty_file_seek_cur),
     Case("FS_fseek_empty_file_seek_end", FS_fseek_empty_file_seek_end),
     Case("FS_fseek_non_empty_file_seek_end", FS_fseek_non_empty_file_seek_end),
-    //Case("FS_fseek_empty_file_seek_end", FS_fseek_beyond_empty_file_seek_end),//GCC_ARM:fseek doesnt fail: Expected Not-Equal
-    //Case("FS_fseek_beyond_non_empty_file_seek_end", FS_fseek_beyond_non_empty_file_seek_end),//GCC_ARM:fseek doesnt fail: Expected Not-Equal
+    Case("FS_fseek_empty_file_seek_end", FS_fseek_beyond_empty_file_seek_end),
+    Case("FS_fseek_beyond_non_empty_file_seek_end", FS_fseek_beyond_non_empty_file_seek_end),
     Case("FS_fseek_before_empty_file_seek_end", FS_fseek_before_empty_file_seek_end),
     Case("FS_fseek_negative_non_empty_file_seek_end", FS_fseek_negative_non_empty_file_seek_end),
 
-    //Case("FS_ftell_null_stream", FS_ftell_null_stream),//ARM:FAIL: Expected -1 Was 3177
-
-    //Case("FS_feof_null_stream", FS_feof_null_stream),//ARM:FAIL: Expected -1 Was 3177
-
-    //Case("FS_fsetpos_null_stream", FS_fsetpos_null_stream),//ARM:mbed Hardfault
-
-    //Case("FS_fgetpos_null_stream", FS_fgetpos_null_stream),//ARM:FAIL: Expected Not-Equal (res is 0)
     Case("FS_fgetpos_rewrite_check_data", FS_fgetpos_rewrite_check_data),
 
-    //Case("FS_fscanf_null_stream", FS_fscanf_null_stream), //GCC_ARM:mbed Hardfault
     Case("FS_fscanf_valid_flow", FS_fscanf_valid_flow),
     Case("FS_fscanf_empty_file", FS_fscanf_empty_file),
     Case("FS_fscanf_more_fields_than_exist", FS_fscanf_more_fields_than_exist),
 
-    //Case("FS_fprintf_null_stream", FS_fprintf_null_stream),
     Case("FS_fprintf_read_mode", FS_fprintf_read_mode),
 
-    //Case("FS_freopen_null_stream", FS_freopen_null_stream),
     Case("FS_freopen_point_to_same_file", FS_freopen_point_to_same_file),
-    //Case("FS_freopen_change_file_mode", FS_freopen_change_file_mode),//TIMEOUT
-    //Case("FS_freopen_invalid_mode", FS_freopen_invalid_mode),
-    //Case("FS_freopen_valid_flow", FS_freopen_valid_flow),//UnicodeDecodeError: 'utf8' codec can't decode byte 0xc6 in position 2: invalid continuation byte
+    Case("FS_freopen_valid_flow", FS_freopen_valid_flow),
 
     Case("FS_fopen_write_one_byte_file", FS_fopen_write_one_byte_file),
     Case("FS_fopen_write_two_byte_file", FS_fopen_write_two_byte_file),
     Case("FS_fopen_write_five_byte_file", FS_fopen_write_five_byte_file),
     Case("FS_fopen_write_fifteen_byte_file", FS_fopen_write_fifteen_byte_file),
-    //Case("FS_fopen_write_five_Kbyte_file", FS_fopen_write_five_Kbyte_file), //ARM:TIMEOUT
+    Case("FS_fopen_write_five_Kbyte_file", FS_fopen_write_five_Kbyte_file),
 
     Case("FS_fseek_rewrite_non_empty_file_begining", FS_fseek_rewrite_non_empty_file_begining),
     Case("FS_fseek_rewrite_non_empty_file_middle", FS_fseek_rewrite_non_empty_file_middle),
