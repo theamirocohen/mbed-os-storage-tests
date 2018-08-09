@@ -17,6 +17,7 @@
 #include "unity/unity.h"
 #include "utest/utest.h"
 #include "LittleFileSystem.h"
+#include "FATFileSystem.h"
 
 #ifndef TEST_SD 
 #define TEST_SPIF
@@ -37,7 +38,7 @@ using namespace utest::v1;
 static const size_t small_buf_size    = 10;
 static const size_t medium_buf_size   = 250;
 static const size_t large_buf_size    = 1200;
-static const size_t test_files  = 4;
+static const size_t test_files        = 4;
 
 FILE *fd[test_files];
 
@@ -57,17 +58,34 @@ SDBlockDevice bd(
     );
 #endif
 
+#define TEST_LFS
+
+#ifdef TEST_LFS
+LittleFileSystem *fs = new LittleFileSystem("lfs");
+#elif defined TEST_FAT
+FATFileSystem *fs = new FATFileSystem("lfs");
+#endif
+
 /*----------------help functions------------------*/
 
 static void init()
 {
     int res = bd.init();
     TEST_ASSERT_EQUAL(0, res);
+
+    res = fs->format(&bd);
+    TEST_ASSERT_EQUAL(0, res);
+
+    res = fs->mount(&bd);
+    TEST_ASSERT_EQUAL(0, res);
 }
 
 static void deinit()
 {
     int res = bd.deinit();
+    TEST_ASSERT_EQUAL(0, res);
+
+    res = fs->unmount();
     TEST_ASSERT_EQUAL(0, res);
 }
 
@@ -78,19 +96,8 @@ static void FS_fopen_path_not_valid()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(1, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
 
     deinit();
 }
@@ -100,19 +107,8 @@ static void FS_fopen_empty_path_r_mode()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "", "rb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "", "rb")) != NULL);
     TEST_ASSERT_EQUAL(1, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
 
     deinit();
 }
@@ -122,19 +118,8 @@ static void FS_fopen_empty_path_w_mode()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "", "wb")) != NULL);
     TEST_ASSERT_EQUAL(1, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
 
     deinit();
 }
@@ -144,20 +129,9 @@ static void FS_fopen_invalid_mode()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "Invalid_mode", "")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "Invalid_mode", "")) != NULL);
     TEST_ASSERT_EQUAL(1, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-    
     deinit();
 }
 
@@ -166,18 +140,7 @@ static void FS_fopen_supported_wb_mode()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -188,18 +151,7 @@ static void FS_fopen_supported_a_mode()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "a")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
+    int res = !((fd[0] = fopen("/lfs/" "hello", "a")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -210,19 +162,8 @@ static void FS_fopen_supported_r_mode()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "r")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "r")) != NULL);
     TEST_ASSERT_EQUAL(1, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
 
     deinit();
 }
@@ -232,18 +173,7 @@ static void FS_fopen_supported_a_update_mode()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "a+")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
+    int res = !((fd[0] = fopen("/lfs/" "hello", "a+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -254,19 +184,8 @@ static void FS_fopen_supported_r_update_mode()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "r+")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "r+")) != NULL);
     TEST_ASSERT_EQUAL(1, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
 
     deinit();
 }
@@ -276,18 +195,7 @@ static void FS_fopen_supported_w_update_mode()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "w+")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w+")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -301,15 +209,7 @@ static void FS_fopen_read_update_create()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), small_buf_size, fd[0]);
@@ -328,9 +228,6 @@ static void FS_fopen_read_update_create()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -342,15 +239,7 @@ static void FS_fopen_write_update_create()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), small_buf_size, fd[0]);
@@ -368,9 +257,6 @@ static void FS_fopen_write_update_create()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 /*----------------fclose()------------------*/
@@ -380,22 +266,10 @@ static void FS_fclose_valid_flow()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -410,16 +284,7 @@ static void FS_fwrite_nmemb_zero()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(buffer, sizeof(char), 0, fd[0]);
@@ -427,9 +292,6 @@ static void FS_fwrite_nmemb_zero()
 
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);  
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
 
     deinit();
 }
@@ -442,15 +304,7 @@ static void FS_fwrite_valid_flow()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), small_buf_size, fd[0]);
@@ -469,9 +323,6 @@ static void FS_fwrite_valid_flow()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -482,17 +333,7 @@ static void FS_fwrite_with_fopen_r_mode()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -519,17 +360,7 @@ static void FS_fread_size_zero()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(buffer, sizeof(char), small_buf_size, fd[0]);
@@ -557,17 +388,7 @@ static void FS_fread_nmemb_zero()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(buffer, sizeof(char), small_buf_size, fd[0]);
@@ -595,15 +416,7 @@ static void FS_fread_with_fopen_w_mode()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -629,17 +442,7 @@ static void FS_fread_to_fwrite_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), small_buf_size, fd[0]);
@@ -661,15 +464,7 @@ static void FS_fread_empty_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -684,9 +479,6 @@ static void FS_fread_empty_file()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -698,15 +490,7 @@ static void FS_fread_valid_flow_small_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -723,9 +507,6 @@ static void FS_fread_valid_flow_small_file()
     TEST_ASSERT_EQUAL_STRING(write_buf, read_buf);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -740,15 +521,7 @@ static void FS_fread_valid_flow_medium_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -765,9 +538,6 @@ static void FS_fread_valid_flow_medium_file()
     TEST_ASSERT_EQUAL_STRING(write_buf, read_buf);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -781,15 +551,7 @@ static void FS_fread_valid_flow_large_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -806,9 +568,6 @@ static void FS_fread_valid_flow_large_file()
     TEST_ASSERT_EQUAL_STRING(write_buf, read_buf);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -822,15 +581,7 @@ static void FS_fread_valid_flow_small_file_read_more_than_write()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -849,9 +600,6 @@ static void FS_fread_valid_flow_small_file_read_more_than_write()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -862,15 +610,7 @@ static void FS_fgetc_empty_file()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -883,9 +623,6 @@ static void FS_fgetc_empty_file()
     TEST_ASSERT_EQUAL(EOF, res);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -901,15 +638,7 @@ static void FS_fgetc_valid_flow()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -926,13 +655,9 @@ static void FS_fgetc_valid_flow()
     }
  
     read_buf[i] = '\0';
-
     TEST_ASSERT_EQUAL_STRING(write_buf, read_buf);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -943,15 +668,7 @@ static void FS_fgetc_with_fopen_w_mode()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -978,15 +695,7 @@ static void FS_fgets_empty_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1000,9 +709,6 @@ static void FS_fgets_empty_file()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1011,15 +717,7 @@ static void FS_fgets_null_buffer_zero_len()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1033,9 +731,6 @@ static void FS_fgets_null_buffer_zero_len()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1044,15 +739,7 @@ static void FS_fgets_null_buffer()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1066,9 +753,6 @@ static void FS_fgets_null_buffer()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1080,15 +764,7 @@ static void FS_fgets_valid_flow()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -1106,9 +782,6 @@ static void FS_fgets_valid_flow()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1122,15 +795,7 @@ static void FS_fgets_new_line()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -1148,9 +813,6 @@ static void FS_fgets_new_line()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1161,15 +823,7 @@ static void FS_fgets_with_fopen_w_mode()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1193,15 +847,7 @@ static void FS_fflush_null_stream()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fflush(NULL);
+    int res = fflush(NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -1215,15 +861,7 @@ static void FS_fflush_valid_flow()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(buffer, sizeof(char), small_buf_size, fd[0]);
@@ -1233,9 +871,6 @@ static void FS_fflush_valid_flow()
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -1249,15 +884,7 @@ static void FS_fflush_twice()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(buffer, sizeof(char), small_buf_size, fd[0]);
@@ -1270,9 +897,6 @@ static void FS_fflush_twice()
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -1287,15 +911,7 @@ static void FS_fputc_valid_flow()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fputc(write_ch, fd[0]);
@@ -1313,9 +929,6 @@ static void FS_fputc_valid_flow()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1326,15 +939,7 @@ static void FS_fputc_in_read_mode()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1347,9 +952,6 @@ static void FS_fputc_in_read_mode()
     TEST_ASSERT_EQUAL(EOF, res);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -1365,15 +967,7 @@ static void FS_fputs_valid_flow()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fputs(write_buf, fd[0]);
@@ -1392,9 +986,6 @@ static void FS_fputs_valid_flow()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1405,15 +996,7 @@ static void FS_fputs_in_read_mode()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1428,9 +1011,6 @@ static void FS_fputs_in_read_mode()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1441,15 +1021,7 @@ static void FS_fseek_empty_file_seek_set()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1467,9 +1039,6 @@ static void FS_fseek_empty_file_seek_set()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1480,15 +1049,7 @@ static void FS_fseek_non_empty_file_seek_set()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -1509,9 +1070,6 @@ static void FS_fseek_non_empty_file_seek_set()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1522,15 +1080,7 @@ static void FS_fseek_beyond_empty_file_seek_set()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1551,9 +1101,6 @@ static void FS_fseek_beyond_empty_file_seek_set()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1565,15 +1112,7 @@ static void FS_fseek_beyond_non_empty_file_seek_set()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -1597,43 +1136,6 @@ static void FS_fseek_beyond_non_empty_file_seek_set()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
-
-//fseek empty file, SEEK_SET, offset -1 - before file start
-static void FS_fseek_before_empty_file_seek_set()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fseek(fd[0], -1, SEEK_SET);
-    TEST_ASSERT_NOT_EQUAL(0, res);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1642,15 +1144,7 @@ static void FS_fseek_empty_file_seek_cur()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1668,9 +1162,6 @@ static void FS_fseek_empty_file_seek_cur()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1681,15 +1172,7 @@ static void FS_fseek_non_empty_file_seek_cur()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -1710,9 +1193,6 @@ static void FS_fseek_non_empty_file_seek_cur()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1722,15 +1202,7 @@ static void FS_fseek_beyond_empty_file_seek_cur()
     char read_buf[small_buf_size] = {};
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1751,9 +1223,6 @@ static void FS_fseek_beyond_empty_file_seek_cur()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1765,15 +1234,7 @@ static void FS_fseek_beyond_non_empty_file_seek_cur()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -1797,43 +1258,6 @@ static void FS_fseek_beyond_non_empty_file_seek_cur()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
-
-//fseek empty file, SEEK_CUR, offset -1 - before file start
-static void FS_fseek_before_empty_file_seek_cur()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fseek(fd[0], -1, SEEK_CUR);
-    TEST_ASSERT_NOT_EQUAL(0, res);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1842,15 +1266,7 @@ static void FS_fseek_empty_file_seek_end()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1868,9 +1284,6 @@ static void FS_fseek_empty_file_seek_end()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1881,15 +1294,7 @@ static void FS_fseek_non_empty_file_seek_end()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -1910,9 +1315,6 @@ static void FS_fseek_non_empty_file_seek_end()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1923,15 +1325,7 @@ static void FS_fseek_beyond_empty_file_seek_end()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -1952,9 +1346,6 @@ static void FS_fseek_beyond_empty_file_seek_end()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -1966,15 +1357,7 @@ static void FS_fseek_beyond_non_empty_file_seek_end()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -1998,43 +1381,6 @@ static void FS_fseek_beyond_non_empty_file_seek_end()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
-    deinit();
-}
-
-//fseek empty file, SEEK_END, offset -1 - before file start
-static void FS_fseek_before_empty_file_seek_end()
-{
-    init();
-
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "rb+")) != NULL);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fseek(fd[0], -1, SEEK_END);
-    TEST_ASSERT_NOT_EQUAL(0, res);
-
-    res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2045,15 +1391,7 @@ static void FS_fseek_negative_non_empty_file_seek_end()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -2074,9 +1412,6 @@ static void FS_fseek_negative_non_empty_file_seek_end()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2092,15 +1427,7 @@ static void FS_fgetpos_rewrite_check_data()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fgetpos(fd[0], &pos);
@@ -2128,9 +1455,6 @@ static void FS_fgetpos_rewrite_check_data()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2145,15 +1469,7 @@ static void FS_fscanf_valid_flow()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fprintf(fd[0], "%d %s", 123, write_buf);
@@ -2176,9 +1492,6 @@ static void FS_fscanf_valid_flow()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2189,24 +1502,13 @@ static void FS_fscanf_empty_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fscanf(fd[0], "%d", &num);
     TEST_ASSERT_EQUAL(EOF, res);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -2221,15 +1523,7 @@ static void FS_fscanf_more_fields_than_exist()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fprintf(fd[0], "%d %s", 123, write_buf);
@@ -2255,9 +1549,6 @@ static void FS_fscanf_more_fields_than_exist()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2268,15 +1559,7 @@ static void FS_fprintf_read_mode()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = fclose(fd[0]);
@@ -2291,9 +1574,6 @@ static void FS_fprintf_read_mode()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2304,15 +1584,7 @@ static void FS_freopen_point_to_same_file()
 {
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     res = !((fd[1] = freopen("/lfs/" "new_file_name", "wb", fd[0])) != NULL);
@@ -2321,9 +1593,6 @@ static void FS_freopen_point_to_same_file()
     TEST_ASSERT_EQUAL(fd[0], fd[1]);
     
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -2337,15 +1606,7 @@ static void FS_freopen_valid_flow()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "wb")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -2361,9 +1622,6 @@ static void FS_freopen_valid_flow()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2377,15 +1635,7 @@ static void FS_fopen_write_one_byte_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(&write_buf, sizeof(char), 1, fd[0]);
@@ -2404,9 +1654,6 @@ static void FS_fopen_write_one_byte_file()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2418,15 +1665,7 @@ static void FS_fopen_write_two_byte_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -2443,9 +1682,6 @@ static void FS_fopen_write_two_byte_file()
     TEST_ASSERT_EQUAL_STRING(write_buf, read_buf);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -2459,15 +1695,7 @@ static void FS_fopen_write_five_byte_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -2484,9 +1712,6 @@ static void FS_fopen_write_five_byte_file()
     TEST_ASSERT_EQUAL_STRING(write_buf, read_buf);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -2500,15 +1725,7 @@ static void FS_fopen_write_fifteen_byte_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -2525,9 +1742,6 @@ static void FS_fopen_write_fifteen_byte_file()
     TEST_ASSERT_EQUAL_STRING(write_buf, read_buf);
 
     res = fclose(fd[0]);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.unmount();
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -2543,15 +1757,7 @@ static void FS_fopen_write_five_Kbyte_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     memcpy(write_buf, check_buf, sizeof(check_buf) - 1);
@@ -2571,9 +1777,6 @@ static void FS_fopen_write_five_Kbyte_file()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2587,15 +1790,7 @@ static void FS_fseek_rewrite_non_empty_file_begining()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -2629,9 +1824,6 @@ static void FS_fseek_rewrite_non_empty_file_begining()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2645,15 +1837,7 @@ static void FS_fseek_rewrite_non_empty_file_middle()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -2687,9 +1871,6 @@ static void FS_fseek_rewrite_non_empty_file_middle()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2703,15 +1884,7 @@ static void FS_fseek_rewrite_non_empty_file_end()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -2745,9 +1918,6 @@ static void FS_fseek_rewrite_non_empty_file_end()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2759,15 +1929,7 @@ static void FS_append_empty_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "a")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "a")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf), fd[0]);
@@ -2786,9 +1948,6 @@ static void FS_append_empty_file()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
-    TEST_ASSERT_EQUAL(0, res);
-
     deinit();
 }
 
@@ -2802,15 +1961,7 @@ static void FS_append_non_empty_file()
 
     init();
 
-    LittleFileSystem fs("lfs");
-
-    int res = LittleFileSystem::format(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = fs.mount(&bd);
-    TEST_ASSERT_EQUAL(0, res);
-
-    res = !((fd[0] = fopen("/lfs/" "hello", "a")) != NULL);
+    int res = !((fd[0] = fopen("/lfs/" "hello", "a")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
     int write_sz = fwrite(write_buf, sizeof(char), sizeof(write_buf) - 1, fd[0]);
@@ -2841,7 +1992,93 @@ static void FS_append_non_empty_file()
     res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
-    res = fs.unmount();
+    deinit();
+}
+
+//fill write_buf buffer with random data, read back the data from the file
+static void FS_write_read_random_data()
+{
+    uint8_t write_buf[medium_buf_size] = { 0 };
+
+    init();
+
+    // Fill write_buf buffer with random data
+    // Write these data into the file
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
+    TEST_ASSERT_EQUAL(0, res);
+
+    for (unsigned int i = 0; i < medium_buf_size; i++) {
+        write_buf[i] = rand() % 0XFF;
+        res = fprintf(fd[0], "%c", write_buf[i]);
+        TEST_ASSERT_EQUAL(1, res);
+    }
+    
+    res = fclose(fd[0]);
+    TEST_ASSERT_EQUAL(0, res);
+
+    // Read back the data from the file and store them in data_read
+    res = !((fd[0] = fopen("/lfs/" "hello", "r")) != NULL);
+    TEST_ASSERT_EQUAL(0, res);
+
+    for (int i = 0; i < medium_buf_size; i++) {
+        uint8_t data = fgetc(fd[0]);
+        TEST_ASSERT_EQUAL(write_buf[i], data);
+    }
+
+    res = fclose(fd[0]);
+    TEST_ASSERT_EQUAL(0, res);
+
+    deinit();
+}
+
+//fill write_buf buffer with random data, read back the data from the file
+static void FS_fill_data_and_seek()
+{
+    unsigned int i, j;
+
+    init();
+
+    int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
+    TEST_ASSERT_EQUAL(0, res);
+
+    for (i = 0; i < 256; i++) {
+        res = fputc(i, fd[0]);
+        TEST_ASSERT_EQUAL(i, res);
+    }
+
+    res = fclose(fd[0]);
+    TEST_ASSERT_EQUAL(0, res);
+    
+    res = !((fd[0] = fopen("/lfs/" "hello", "r")) != NULL);
+    TEST_ASSERT_EQUAL(0, res);
+
+    for (i = 1; i <= 255; i++) {
+
+        res = fseek(fd[0], (long) -i, SEEK_END);
+        TEST_ASSERT_EQUAL(0, res);
+
+        j = getc(fd[0]);
+        TEST_ASSERT_EQUAL(256 - i, j);
+
+        res = fseek(fd[0], (long) i, SEEK_SET);
+        TEST_ASSERT_EQUAL(0, res);
+
+        j = getc(fd[0]);
+        TEST_ASSERT_EQUAL(i, j);
+
+        res = fseek(fd[0], (long) i, SEEK_SET);
+        TEST_ASSERT_EQUAL(0, res);
+
+        if (res = fseek(fd[0], (long) (i >= 128 ? -128 : 128), SEEK_CUR)) {
+            TEST_ASSERT_EQUAL(0, res);
+        }
+
+        if (j = getc (fd[0])) {
+            TEST_ASSERT_EQUAL((i >= 128 ? i - 128 : i + 128), j);
+        }
+    }
+
+    res = fclose(fd[0]);
     TEST_ASSERT_EQUAL(0, res);
 
     deinit();
@@ -2905,17 +2142,14 @@ Case cases[] = {
     Case("FS_fseek_non_empty_file_seek_set", FS_fseek_non_empty_file_seek_set),
     Case("FS_fseek_empty_file_seek_set", FS_fseek_beyond_empty_file_seek_set),
     Case("FS_fseek_beyond_non_empty_file_seek_set", FS_fseek_beyond_non_empty_file_seek_set),
-    Case("FS_fseek_before_empty_file_seek_set", FS_fseek_before_empty_file_seek_set),
     Case("FS_fseek_empty_file_seek_cur", FS_fseek_empty_file_seek_cur),
     Case("FS_fseek_non_empty_file_seek_cur", FS_fseek_non_empty_file_seek_cur),
     Case("FS_fseek_empty_file_seek_cur", FS_fseek_beyond_empty_file_seek_cur),
     Case("FS_fseek_beyond_non_empty_file_seek_cur", FS_fseek_beyond_non_empty_file_seek_cur),
-    Case("FS_fseek_before_empty_file_seek_cur", FS_fseek_before_empty_file_seek_cur),
     Case("FS_fseek_empty_file_seek_end", FS_fseek_empty_file_seek_end),
     Case("FS_fseek_non_empty_file_seek_end", FS_fseek_non_empty_file_seek_end),
     Case("FS_fseek_empty_file_seek_end", FS_fseek_beyond_empty_file_seek_end),
     Case("FS_fseek_beyond_non_empty_file_seek_end", FS_fseek_beyond_non_empty_file_seek_end),
-    Case("FS_fseek_before_empty_file_seek_end", FS_fseek_before_empty_file_seek_end),
     Case("FS_fseek_negative_non_empty_file_seek_end", FS_fseek_negative_non_empty_file_seek_end),
 
     Case("FS_fgetpos_rewrite_check_data", FS_fgetpos_rewrite_check_data),
@@ -2941,11 +2175,14 @@ Case cases[] = {
 
     Case("FS_append_empty_file", FS_append_empty_file),
     Case("FS_append_non_empty_file", FS_append_non_empty_file),
+
+    Case("FS_write_read_random_data", FS_write_read_random_data),
+    Case("FS_fill_data_and_seek", FS_fill_data_and_seek),
 };
 
 utest::v1::status_t greentea_test_setup(const size_t number_of_cases)
 {
-    GREENTEA_SETUP(60, "default_auto");
+    GREENTEA_SETUP(120, "default_auto");
     return greentea_test_setup_handler(number_of_cases);
 }
 
@@ -2954,4 +2191,5 @@ Specification specification(greentea_test_setup, cases, greentea_test_teardown_h
 int main()
 {
     return !Harness::run(specification);
+    delete fs;
 }
