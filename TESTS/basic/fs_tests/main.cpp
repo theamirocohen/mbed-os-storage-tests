@@ -18,6 +18,7 @@
 #include "utest/utest.h"
 #include "LittleFileSystem.h"
 #include "FATFileSystem.h"
+#include "HeapBlockDevice.h"
 
 #ifndef TEST_SD 
 #define TEST_SPIF
@@ -56,10 +57,16 @@ SDBlockDevice bd(
     MBED_CONF_SD_SPI_CLK, 
     MBED_CONF_SD_SPI_CS
     );
+#elif defined TEST_HEAP
+#define BLOCK_SIZE 512
+#define BLOCK_COUNT 512
+HeapBlockDevice bd(
+    BLOCK_COUNT*BLOCK_SIZE, 
+    BLOCK_SIZE
+    );
 #endif
 
-#define TEST_LFS
-
+#define TEST_FAT
 #ifdef TEST_LFS
 LittleFileSystem *fs = new LittleFileSystem("lfs");
 #elif defined TEST_FAT
@@ -1998,16 +2005,16 @@ static void FS_append_non_empty_file()
 //fill write_buf buffer with random data, read back the data from the file
 static void FS_write_read_random_data()
 {
-    uint8_t write_buf[medium_buf_size] = { 0 };
+    char write_buf[medium_buf_size] = {};
+    unsigned int i;
 
     init();
 
-    // Fill write_buf buffer with random data
-    // Write these data into the file
+    // Fill write_buf buffer with random data and write the data into the file
     int res = !((fd[0] = fopen("/lfs/" "hello", "w")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
-    for (unsigned int i = 0; i < medium_buf_size; i++) {
+    for (i = 0; i < medium_buf_size; i++) {
         write_buf[i] = rand() % 0XFF;
         res = fprintf(fd[0], "%c", write_buf[i]);
         TEST_ASSERT_EQUAL(1, res);
@@ -2020,7 +2027,7 @@ static void FS_write_read_random_data()
     res = !((fd[0] = fopen("/lfs/" "hello", "r")) != NULL);
     TEST_ASSERT_EQUAL(0, res);
 
-    for (int i = 0; i < medium_buf_size; i++) {
+    for (i = 0; i < medium_buf_size; i++) {
         uint8_t data = fgetc(fd[0]);
         TEST_ASSERT_EQUAL(write_buf[i], data);
     }
@@ -2069,13 +2076,11 @@ static void FS_fill_data_and_seek()
         res = fseek(fd[0], (long) i, SEEK_SET);
         TEST_ASSERT_EQUAL(0, res);
 
-        if (res = fseek(fd[0], (long) (i >= 128 ? -128 : 128), SEEK_CUR)) {
-            TEST_ASSERT_EQUAL(0, res);
-        }
+        res = fseek(fd[0], (long) (i >= 128 ? -128 : 128), SEEK_CUR);
+        TEST_ASSERT_EQUAL(0, res);
 
-        if (j = getc (fd[0])) {
-            TEST_ASSERT_EQUAL((i >= 128 ? i - 128 : i + 128), j);
-        }
+        j = getc(fd[0]);
+        TEST_ASSERT_EQUAL((i >= 128 ? i - 128 : i + 128), j);
     }
 
     res = fclose(fd[0]);
@@ -2087,6 +2092,9 @@ static void FS_fill_data_and_seek()
 /*----------------setup------------------*/
 
 Case cases[] = {
+    Case("FS_write_read_random_data", FS_write_read_random_data),
+    Case("FS_fill_data_and_seek", FS_fill_data_and_seek),
+
 
     Case("FS_fopen_path_not_valid", FS_fopen_path_not_valid),
     Case("FS_fopen_empty_path_r_mode", FS_fopen_empty_path_r_mode),
@@ -2176,13 +2184,14 @@ Case cases[] = {
     Case("FS_append_empty_file", FS_append_empty_file),
     Case("FS_append_non_empty_file", FS_append_non_empty_file),
 
-    Case("FS_write_read_random_data", FS_write_read_random_data),
-    Case("FS_fill_data_and_seek", FS_fill_data_and_seek),
+    /*Case("FS_write_read_random_data", FS_write_read_random_data),
+    Case("FS_fill_data_and_seek", FS_fill_data_and_seek),*/
 };
+
 
 utest::v1::status_t greentea_test_setup(const size_t number_of_cases)
 {
-    GREENTEA_SETUP(120, "default_auto");
+    GREENTEA_SETUP(3000, "default_auto");
     return greentea_test_setup_handler(number_of_cases);
 }
 
@@ -2190,6 +2199,7 @@ Specification specification(greentea_test_setup, cases, greentea_test_teardown_h
 
 int main()
 {
-    return !Harness::run(specification);
+    bool res = !Harness::run(specification);
     delete fs;
+    return res;
 }
